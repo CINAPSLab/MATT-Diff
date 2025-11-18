@@ -1,0 +1,23 @@
+{
+  "name": "Multi Tracking FoV Dev",
+  "containerName": "multitracking-fov-dev",
+  "build": { "dockerfile": "Dockerfile", "context": ".." },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "runArgs": ["--gpus","all","--ipc=host","--shm-size=16g"],
+  "containerEnv": {
+    "NVIDIA_VISIBLE_DEVICES": "all",
+    "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+    "PYTORCH_CUDA_ALLOC_CONF": "",
+    "PYTORCH_ALLOC_CONF": "max_split_size_mb:256,garbage_collection_threshold:0.9"
+  },
+  "settings": { "python.defaultInterpreterPath": "/opt/venv/bin/python" },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-toolsai.jupyter",
+    "ms-azuretools.vscode-docker"
+  ],
+  "remoteUser": "root",
+  "postCreateCommand": "/opt/venv/bin/pip install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt"
+}

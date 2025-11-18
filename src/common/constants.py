@@ -1,0 +1,7 @@
+MAP_WH = (1909, 955)
+
+K_OUT = 6
+
+S_LOST_NORM = 0.37478616
+
+__all__ = ["MAP_WH", "K_OUT", "S_LOST_NORM"]

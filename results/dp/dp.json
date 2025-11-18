@@ -1,0 +1,39 @@
+{
+  "args": {
+    "ckpt_path": "src/run/dp/best.pt",
+    "seed": 29,
+    "save_timeseries_dir": "results/dp/dp"
+  },
+  "metrics": [
+    {
+      "rmse_exist": 542.7632867338201,
+      "nll": 14.8428827476891,
+      "entropy": 13.417777993535461,
+      "episode": 0
+    },
+    {
+      "rmse_exist": 527.5291821944289,
+      "nll": 14.583300288909612,
+      "entropy": 13.319020133926143,
+      "episode": 1
+    },
+    {
+      "rmse_exist": 556.2858901883681,
+      "nll": 14.51188707443463,
+      "entropy": 12.985248185637307,
+      "episode": 2
+    },
+    {
+      "rmse_exist": 266.51642869998943,
+      "nll": 12.346991927568705,
+      "entropy": 12.726344689617363,
+      "episode": 3
+    },
+    {
+      "rmse_exist": 523.9418397201041,
+      "nll": 14.574045810318635,
+      "entropy": 13.308075057678288,
+      "episode": 4
+    }
+  ]
+}
