@@ -1,6 +1,5 @@
 # Active Multi-Agent tracking
 
-Please check our [code](https://github.com/CINAPSLab/MATT-Diff.git) in CINAPSLab GitHub Organization.
 This repository is a PyTorch implementation for paper ***[MATT--Diff: Multimodal Active Target Tracking by Diffusion Policy](https://arxiv.org/pdf/2511.11931)***
 Authors: [Saida Liu](https://saidaliu27.github.io/), [Nikolay Atanasov](https://natanaso.github.io/), [Shumon Koga](https://shumon0423.github.io/).
 If you are using the code for research work, please cite:
