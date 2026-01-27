@@ -124,31 +124,3 @@ def load_houseexpo_image_as_grid(image_path,  threshold=127):
 
 
 
-def cov_ellipse(mu, Sigma, n_std: float = 2.0):
-    mu = np.asarray(mu, dtype=float).ravel()
-    Sigma = np.asarray(Sigma, dtype=float)
-
-    if mu.size < 2:
-        mu = np.array([0.0, 0.0], dtype=float)
-    else:
-        mu = mu[:2]
-
-    if Sigma.shape != (2, 2):
-        Sigma = np.eye(2, dtype=float)
-
-    vals, vecs = np.linalg.eigh(Sigma)
-    vals = np.maximum(vals, 0.0)
-
-    order = np.argsort(vals)[::-1]
-    vals = vals[order]
-    vecs = vecs[:, order]
-
-    axes = n_std * np.sqrt(vals)
-    axis_x = float(axes[0])
-    axis_y = float(axes[1])
-
-    vx, vy = vecs[0, 0], vecs[1, 0]
-    angle = float(np.degrees(np.arctan2(vy, vx)))
-
-    center = (float(mu[0]), float(mu[1]))
-    return center, (axis_x, axis_y), angle

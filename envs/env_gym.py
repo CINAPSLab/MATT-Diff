@@ -5,9 +5,9 @@ from typing import Tuple, Dict, List, Any, Optional
 import gymnasium as gym
 from gymnasium import spaces
 
-from utilities.utils import SDF_RT, polygon_SDF, SE2_kinematics, cov_ellipse
+from utilities.utils import SDF_RT, polygon_SDF, SE2_kinematics
 from envs.target.BrownWalker import BrownWalker
-from utilities.KalmanFilter import KalmanFilter
+from utilities.KalmanFilter import KalmanFilter, cov_ellipse
 
 
 class SimpleGymEnv(gym.Env):
@@ -442,6 +442,7 @@ class SimpleGymEnv(gym.Env):
 
         for i in range(self.KMAX):
             kf = self._kf_targets[i]
+            print(i, getattr(kf, "_seen", False), kf.P[0,0], kf.P[1,1])
             try:
                 est = kf.x[:2] if hasattr(kf, "x") else np.array([0.0, 0.0], dtype=float)
                 P_pos = kf.P[:2, :2] if hasattr(kf, "P") else np.eye(2, dtype=float)
