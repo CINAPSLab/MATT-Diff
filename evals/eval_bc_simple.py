@@ -8,18 +8,13 @@ Differences from eval_bc.py:
   - multi-seed loop matching eval_dp_simple.py convention
 
 Usage:
-  python -m evals.eval_bc_simple \
-    --ckpt output/model/bc_simple/ckpt_best.pt \
-    --map_path map/0.png --seed 27 --episodes 10 \
-    --out output/results/bc_simple/map0/map0_seed27_ep10.json \
-    --ts_dir output/results/bc_simple/map0/timeseries/map0_seed27_ep10
+  python -u -m evals.eval_bc_simple
 """
 
 from __future__ import annotations
 
 import numpy as np
 import torch
-import json
 import argparse
 from pathlib import Path
 from typing import Any, Dict, List
@@ -65,25 +60,22 @@ def run_bc_episode(env: SimpleGymEnv, policy: BCPolicy,
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Evaluate BC policy with simple point-mass dynamics")
-    parser.add_argument("--ckpt",      type=str, required=True)
-    parser.add_argument("--out",       type=str, required=True)
-    parser.add_argument("--ts_dir",    type=str, required=True)
-    parser.add_argument("--map_path",  type=str, required=True)
-    parser.add_argument("--seed",      type=int, default=27)
-    parser.add_argument("--episodes",  type=int, default=10)
+    parser.add_argument("--ckpt",      type=str, default="output/model/bc/best.pt")
+    parser.add_argument("--ts_dir",    type=str, default="output/results/bc_simple/timeseries")
+    parser.add_argument("--map_path",  type=str, default="map/evaluation_map.png")
+    parser.add_argument("--seed",      type=int, default=57)
+    parser.add_argument("--episodes",  type=int, default=20)
     parser.add_argument("--step_size", type=float, default=10.0,
                         help="Action bound ±step_size for (dx, dy)")
     parser.add_argument("--momentum",     type=float, default=0.5)
     parser.add_argument("--theta_alpha",  type=float, default=0.3)
-    parser.add_argument("--collision_freeze", action="store_true",
-                        help="Freeze robot on first wall collision")
+    parser.add_argument("--collision_freeze", action=argparse.BooleanOptionalAction, default=True,
+                        help="Freeze robot on wall collision (default: True)")
     args = parser.parse_args()
 
     device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ts_dir  = Path(args.ts_dir)
-    out_path = Path(args.out)
     ts_dir.mkdir(parents=True, exist_ok=True)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     # load BC policy
     policy = BCPolicy(args.ckpt, device=device, use_robot=False)
@@ -138,17 +130,9 @@ def main() -> None:
     task_avg = {k: float(np.mean([e[k] for e in ep_metrics])) for k in keys}
     task_std = {f"{k}_std": float(np.std([e[k] for e in ep_metrics])) for k in keys}
 
-    with open(out_path, "w") as f:
-        json.dump({
-            "args": vars(args),
-            "task_avg": {**task_avg, **task_std},
-            "per_episode": ep_metrics,
-        }, f, indent=2)
-
     print(f"\n[bc-simple] map={args.map_path}  seed={args.seed}  episodes={args.episodes}")
     print(f"  avg rmse={task_avg['rmse_exist']:.4f}  "
           f"nll={task_avg['nll']:.4f}  H={task_avg['entropy']:.4f}")
-    print(f"  saved -> {out_path}")
 
 
 if __name__ == "__main__":

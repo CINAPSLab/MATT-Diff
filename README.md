@@ -108,28 +108,17 @@ After downloading, you can directly evaluate MATT-Diff.
 ### Evaluate MATT-Diff (Diffusion Policy)
 
 ```bash
-python -u -m evals.eval_dp_simple \
-    --ckpt output/model/dp/best.pt \
-    --map_path map/5.png \
-    --seed 57 --episodes 10 --collision_freeze
+python -u -m evals.eval_dp_simple
 ```
 
 ### Evaluate Baselines
 
 ```bash
 # Behavior Cloning
-python -u -m evals.eval_bc_simple \
-    --ckpt output/model/bc/best.pt \
-    --map_path map/5.png \
-    --out output/results/bc_eval.json \
-    --ts_dir output/results/bc_timeseries \
-    --seed 57 --episodes 10 --collision_freeze
+python -u -m evals.eval_bc_simple
 
 # DQN
-python -u -m evals.eval_dqn_simple \
-    --ckpt output/model/dqn/model.zip \
-    --map_path map/5.png \
-    --seed 57 --episodes 10 --collision_freeze
+python -u -m evals.eval_dqn_simple
 ```
 
 ## Other codes usages

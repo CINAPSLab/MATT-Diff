@@ -2,16 +2,11 @@
 Evaluate DP (MATT-Diff) with simple point-mass dynamics.
 
 Usage:
-  python -m evals.eval_dp_simple \
-    --ckpt output/model/dp_simple/best.pt \
-    --map_path map/5.png --seed 47 --episodes 10 \
-    --out output/results/dp_simple_eval.json \
-    --ts_dir output/results/dp_simple/timeseries
+  python -u -m evals.eval_dp_simple
 """
 
 import numpy as np
 import torch
-import json
 import argparse
 from pathlib import Path
 
@@ -63,19 +58,18 @@ def run_dp_episode(env: SimpleGymEnv, agent: DPAgent, max_steps: int,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ckpt", type=str, required=True)
-    parser.add_argument("--out", type=str, default="output/results/dp_simple_eval.json")
+    parser.add_argument("--ckpt", type=str, default="output/model/dp/best.pt")
     parser.add_argument("--ts_dir", type=str, default="output/results/dp_simple/timeseries")
-    parser.add_argument("--map_path", type=str, required=True)
-    parser.add_argument("--seed", type=int, default=47)
-    parser.add_argument("--episodes", type=int, default=10)
+    parser.add_argument("--map_path", type=str, default="map/evaluation_map.png")
+    parser.add_argument("--seed", type=int, default=57)
+    parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--inf_steps", type=int, default=20)
     parser.add_argument("--action_horizon", type=int, default=4)
     parser.add_argument("--momentum", type=float, default=0.5)
     parser.add_argument("--theta_alpha", type=float, default=0.3)
     parser.add_argument("--step_size", type=float, default=10.0)
-    parser.add_argument("--collision_freeze", action="store_true",
-                        help="Freeze robot on first wall collision")
+    parser.add_argument("--collision_freeze", action=argparse.BooleanOptionalAction, default=True,
+                        help="Freeze robot on wall collision (default: True)")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -126,7 +120,6 @@ def main():
 
     ts_dir = Path(args.ts_dir)
     ts_dir.mkdir(parents=True, exist_ok=True)
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
 
     metrics: List[Dict[str, float]] = []
 
@@ -160,9 +153,13 @@ def main():
             payload["robot"] = data["robot"]
         np.savez_compressed(ts_dir / f"dp_ep{ep:03d}.npz", **payload)
 
-    with open(args.out, "w") as f:
-        json.dump({"args": vars(args), "metrics": metrics}, f, indent=2)
-    print(f"\nSaved -> {args.out}")
+    keys = ["rmse_exist", "nll", "entropy"]
+    task_avg = {k: float(np.mean([e[k] for e in metrics])) for k in keys}
+    task_std = {f"{k}_std": float(np.std([e[k] for e in metrics])) for k in keys}
+
+    print(f"\n[dp-simple] map={args.map_path}  seed={args.seed}  episodes={args.episodes}")
+    print(f"  avg rmse={task_avg['rmse_exist']:.4f}  "
+          f"nll={task_avg['nll']:.4f}  H={task_avg['entropy']:.4f}")
 
 
 if __name__ == "__main__":

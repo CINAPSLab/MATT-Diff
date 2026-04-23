@@ -1,17 +1,10 @@
 """
-python -m evals.eval_dqn_simple \
-  --ckpt "output/model/dqn_simple_100k.zip" \
-  --out "output/results/dqn_simple/map0/dqn_simple_map0_seed27.json" \
-  --ts_dir "output/results/dqn_simple/map0/timeseries/map0_seed27" \
-  --map_path "map/0.png" \
-  --seed 27 \
-  --episodes 10
+python -u -m evals.eval_dqn_simple
 """
 
 import numpy as np
 import torch
 import torch.nn as nn
-import json
 import argparse
 from pathlib import Path
 
@@ -158,12 +151,20 @@ def dump_timeseries_npz(save_dir: Path, ep_idx: int, data: Dict[str, np.ndarray]
     np.savez_compressed(out_path, **payload)
 
 
-def main(args: argparse.Namespace):
+def main():
+    parser = argparse.ArgumentParser(description="Evaluate DQN Simple Baseline Model")
+    parser.add_argument("--ckpt", type=str, default="output/model/dqn/model.zip")
+    parser.add_argument("--ts_dir", type=str, default="output/results/dqn_simple/timeseries")
+    parser.add_argument("--map_path", type=str, default="map/evaluation_map.png")
+    parser.add_argument("--seed", type=int, default=57)
+    parser.add_argument("--episodes", type=int, default=20)
+    parser.add_argument("--collision_freeze", action=argparse.BooleanOptionalAction, default=True,
+                        help="Freeze robot on wall collision (default: True)")
+    args = parser.parse_args()
+
     ckpt_path = Path(args.ckpt)
-    out_path = Path(args.out)
     timeseries_dir = Path(args.ts_dir)
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     timeseries_dir.mkdir(parents=True, exist_ok=True)
 
     grid = load_houseexpo_image_as_grid(args.map_path)
@@ -193,41 +194,25 @@ def main(args: argparse.Namespace):
             rmse_all_censored=False,
         )
 
-        metrics.append(
-            {
-                "rmse_exist": float(m["rmse_exist"]),
-                "nll": float(m["nll"]),
-                "entropy": float(m["entropy"]),
-                "episode": ep,
-            }
-        )
+        metrics.append({
+            "rmse_exist": float(m["rmse_exist"]),
+            "nll": float(m["nll"]),
+            "entropy": float(m["entropy"]),
+            "episode": ep,
+        })
 
         print(f"Episode {ep} | RMSE: {m['rmse_exist']:.2f} | NLL: {m['nll']:.2f}")
 
         dump_timeseries_npz(timeseries_dir, ep, data)
 
-    out_obj = {
-        "args": vars(args),
-        "metrics": metrics,
-    }
+    keys = ["rmse_exist", "nll", "entropy"]
+    task_avg = {k: float(np.mean([e[k] for e in metrics])) for k in keys}
+    task_std = {f"{k}_std": float(np.std([e[k] for e in metrics])) for k in keys}
 
-    with open(out_path, "w") as f:
-        json.dump(out_obj, f, indent=2)
-
-    print(f"Evaluation complete. Metrics saved to {out_path}")
+    print(f"\n[dqn-simple] map={args.map_path}  seed={args.seed}  episodes={args.episodes}")
+    print(f"  avg rmse={task_avg['rmse_exist']:.4f}  "
+          f"nll={task_avg['nll']:.4f}  H={task_avg['entropy']:.4f}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate DQN Simple Baseline Model")
-
-    parser.add_argument("--ckpt", type=str, default="output/model/dqn_simple_100k.zip")
-    parser.add_argument("--out", type=str, default="output/results/dqn_simple/dqn_simple_eval.json")
-    parser.add_argument("--ts_dir", type=str, default="output/results/dqn_simple/timeseries")
-    parser.add_argument("--map_path", type=str, default="map/0.png")
-    parser.add_argument("--seed", type=int, default=27)
-    parser.add_argument("--episodes", type=int, default=10)
-    parser.add_argument("--collision_freeze", action="store_true",
-                        help="Freeze robot on first wall collision")
-
-    args = parser.parse_args()
-    main(args)
+    main()
