@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import torch
 import torch.nn as nn
 from diffusers import DDPMScheduler
@@ -8,16 +7,13 @@ from diffusers import DDPMScheduler
 from .unet1d import ConditionalUnet1D
 from .map_encoder import OccPerformerEncoder_v2
 from .target_encoder import TargetSetEncoder
-from src.common.constants import MAP_WH, K_OUT, S_LOST_NORM
+from src.common.constants import K_OUT
 from src.common.utils import ego_to_float01
 
 from typing import Dict, Optional, Tuple
 
 
 class DiffusionPolicyNetwork(nn.Module):
-    """
-    ## add comment (English, obey to my paper)
-    """
 
     def __init__(self, action_dim: int, obs_horizon: int, pred_horizon: int,
         *,
@@ -29,10 +25,6 @@ class DiffusionPolicyNetwork(nn.Module):
         self.pred_horizon = int(pred_horizon)
 
         self.k_slots = int(K_OUT)
-        self.s_lost_norm = float(S_LOST_NORM)
-        W, H = MAP_WH
-        self.map_w, self.map_h = int(W), int(H)
-
         self.use_age = bool(use_age)
         self.slot_feat_dim = 8 if self.use_age else 7 
 
@@ -50,9 +42,12 @@ class DiffusionPolicyNetwork(nn.Module):
         self.ln_map = nn.LayerNorm(map_emb_dim)
         self.ln_target = nn.LayerNorm(256)
 
-        # Global condition 
+        # Global condition
         gdim = map_emb_dim + 256
         self.ln_gc = nn.LayerNorm(gdim)
+
+        # Temporal projection for map embeddings
+        self.map_temporal_proj = nn.Linear(obs_horizon * map_emb_dim, map_emb_dim)
 
         # Conditional U-net
         self.noise_pred_net = ConditionalUnet1D(
@@ -73,79 +68,26 @@ class DiffusionPolicyNetwork(nn.Module):
         )
 
 
-    @torch.no_grad()
-    def _build_slot_mask(self, slots: torch.Tensor) -> torch.Tensor:
-
-        maxsig = slots[..., 2:4].max(dim=-1).values
-        return (maxsig < self.s_lost_norm).float()
-
-    @torch.no_grad()
-    def _featurize_slots(self, slots_last: torch.Tensor, robot_last: torch.Tensor,
-        age_last: Optional[torch.Tensor] = None) -> torch.Tensor:
-        B, K, _ = slots_last.shape
-        W = float(self.map_w)
-        HH = float(self.map_h)
-
-        x_px = ((slots_last[..., 0] + 1.0) * 0.5 * (W - 1.0)).clamp(0.0, W - 1.0)
-        y_px = ((slots_last[..., 1] + 1.0) * 0.5 * (HH - 1.0)).clamp(0.0, HH - 1.0)
-
-        rx = robot_last[..., 0].unsqueeze(-1)
-        ry = robot_last[..., 1].unsqueeze(-1)
-        th = robot_last[..., 2].unsqueeze(-1)
-        dx = x_px - rx
-        dy = y_px - ry
-        c = torch.cos(th)
-        s = torch.sin(th)
-        dx_r =  c * dx + s * dy
-        dy_r = -s * dx + c * dy
-
-        phi = torch.atan2(dy_r, dx_r)
-        r = torch.sqrt(dx * dx + dy * dy)
-
-        dxn = torch.clamp(dx_r / max(W / 2.0, 1.0), -1.0, 1.0)
-        dyn = torch.clamp(dy_r / max(HH / 2.0, 1.0), -1.0, 1.0)
-        r_cap = math.sqrt((W / 2.0) ** 2 + (HH / 2.0) ** 2)
-        rn = torch.clamp(r / max(r_cap, 1.0), 0.0, 1.0)
-        sinp = torch.sin(phi)
-        cosp = torch.cos(phi)
-
-        sx = slots_last[..., 2].clamp(0.0, 1.0)
-        sy = slots_last[..., 3].clamp(0.0, 1.0)
-
-        feats = [dxn, dyn, rn, sinp, cosp, sx, sy]
-        if self.use_age:
-            age = torch.zeros_like(dxn) if (age_last is None) else age_last.clamp(0.0, 1.0)
-            feats.append(age)
-
-        return torch.stack(feats, dim=-1).to(slots_last.dtype)
 
     def _encode_map(self, ego_map: torch.Tensor) -> torch.Tensor:
         B, H = ego_map.shape[:2]
         x = ego_map.reshape(B * H, 4, 128, 128)
         x = ego_to_float01(x)
         z_map, _ = self.map_encoder(x)
-        return z_map.reshape(B, H, -1).mean(dim=1)
+        return self.map_temporal_proj(z_map.reshape(B, -1))
 
     def _build_global_cond(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
         ego_map = batch["ego_map"]
-        robot   = batch["robot"]
-        slots   = batch["slots"][:, :, :self.k_slots, :]
+        slot_features = batch["slot_features"][:, :, :self.k_slots, :]
+        slot_mask = batch["slot_mask"][:, :, :self.k_slots]
 
         # map
         z_map = self.ln_map(self._encode_map(ego_map))  
 
-        slots_last = slots[:, -1]
-        robot_last = robot[:, -1]
-        mask_last  = self._build_slot_mask(slots)[:, -1]
-        age_last   = batch.get("age", None)
-        if self.use_age and (age_last is not None):
-            age_last = age_last[:, -1]
-        else:
-            age_last = None
+        slot_feat_last = slot_features[:, -1]   # [B, K, 7]
+        mask_last = slot_mask[:, -1]             # [B, K]
 
-        slot_feat = self._featurize_slots(slots_last, robot_last, age_last)
-        z_target  = self.ln_target(self.tse(slot_feat, mask_last))
-
+        z_target = self.ln_target(self.tse(slot_feat_last, mask_last))
         return self.ln_gc(torch.cat([z_map, z_target], dim=-1))
 
 

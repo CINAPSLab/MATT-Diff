@@ -123,14 +123,15 @@ class ConditionalUnet1D(nn.Module):
             ]))
 
         self.up_modules = nn.ModuleList([])
-        for ind, (dim_in, dim_out) in enumerate(reversed(in_out[1:])):
+        for ind, (dim_in, dim_out) in enumerate(reversed(in_out)):
             is_last = ind >= (len(in_out) - 1)
+            up_out = start_dim if is_last else dim_in
             self.up_modules.append(nn.ModuleList([
-                ConditionalResidualBlock1D(dim_out * 2, dim_in, cond_dim=cond_dim,
+                ConditionalResidualBlock1D(dim_out * 2, up_out, cond_dim=cond_dim,
                                            kernel_size=kernel_size, n_groups=n_groups),
-                ConditionalResidualBlock1D(dim_in, dim_in, cond_dim=cond_dim,
+                ConditionalResidualBlock1D(up_out, up_out, cond_dim=cond_dim,
                                            kernel_size=kernel_size, n_groups=n_groups),
-                Upsample1d(dim_in) if not is_last else nn.Identity()
+                Upsample1d(up_out) if not is_last else nn.Identity()
             ]))
 
         self.final_conv = nn.Sequential(

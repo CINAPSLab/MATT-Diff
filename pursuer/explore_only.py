@@ -579,7 +579,7 @@ class Coordinator:
             grid,
             plan_grid=self.plan_grid,
             frontier_min_area=1500,
-            frontier_opening=0,
+            frontier_opening=25,
             frontier_gain_weight=1.0,
             frontier_dist_weight=10.0,
             frontier_known_weight=0.4,
@@ -595,10 +595,6 @@ class Coordinator:
             nearest_tabu_radius=70.0,
             nearest_w_tabu=0.8,
         )
-        if goal_params:
-            for k, v in goal_params.items():
-                if hasattr(self.goal_selector, k):
-                    setattr(self.goal_selector, k, v)
 
         self.controller = PurePursuitController()
 

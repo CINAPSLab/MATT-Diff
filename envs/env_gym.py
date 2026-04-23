@@ -11,7 +11,7 @@ from utilities.KalmanFilter import KalmanFilter, cov_ellipse
 
 
 class SimpleGymEnv(gym.Env):
-    KMAX = 10
+    KMAX = 6
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
     def __init__(self, grid, fov_rad: float, radius: float | None = None, tau: float | None = None,
@@ -258,15 +258,19 @@ class SimpleGymEnv(gym.Env):
                     ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         super().reset(seed=seed)
 
+        # --- RNG streams from a single master seed ---
         if seed is None:
-            sseq = np.random.SeedSequence()
+            sseq_master = np.random.SeedSequence()
         else:
-            sseq = np.random.SeedSequence(int(seed))
-        spawn_ss, motion_ss, obs_ss = sseq.spawn(3)
-        self.rng_spawn = np.random.default_rng(spawn_ss)
-        self.rng_motion = np.random.default_rng(motion_ss)
-        self.rng_obs = np.random.default_rng(obs_ss)
+            sseq_master = np.random.SeedSequence(int(seed))
+            
+        sseq_spawn, sseq_obs, sseq_motion_parent = sseq_master.spawn(3)
 
+        self.rng_spawn = np.random.default_rng(sseq_spawn)   # For spawn positions, object counts, etc.
+        self.rng_obs   = np.random.default_rng(sseq_obs)     # For observation noise
+        # Motion RNGs will be assigned individually per target later
+
+        # --- Maps & bookkeeping ---
         self._known = np.zeros((self.height, self.width), dtype=np.int8)
         self._known[self._global_map == 0] = -1
         self._visits = np.zeros((self.height, self.width), dtype=np.float32)
@@ -275,7 +279,7 @@ class SimpleGymEnv(gym.Env):
         free_ys, free_xs = np.where(free_mask)
         assert free_xs.size > 0, "No free space to spawn"
 
-        def _sample_free_xy(min_clear_px: int = 0):
+        def _sample_free_xy(min_clear_px: int = 0) -> Tuple[float, float]:
             if min_clear_px > 0:
                 m = self._dist >= max(self._keepout, min_clear_px)
                 ys, xs = np.where(m)
@@ -285,9 +289,9 @@ class SimpleGymEnv(gym.Env):
             i = int(self.rng_spawn.integers(0, free_xs.size))
             return float(free_xs[i]), float(free_ys[i])
 
-        if options is None:
-            options = {}
+        options = {} if options is None else dict(options)
 
+        # --- Robot spawn ---
         if "robot_xy" in options or "robot_th" in options:
             rx, ry = options.get("robot_xy", (self.width / 2.0, self.height / 2.0))
             rth = options.get(
@@ -301,32 +305,40 @@ class SimpleGymEnv(gym.Env):
         self._rbt = np.array([rx, ry, rth], dtype=float)
         self._env_step_count = 0
         self._traj = [self._rbt.copy()]
+        self._frozen = False  # set True on collision if collision_freeze=True
 
+        # --- Slot / KF Initialization ---
         self._tgts: List[Optional[BrownWalker]] = [None for _ in range(self.KMAX)]
         self._kf_targets: List[KalmanFilter] = []
         self._tmask[:] = 1
 
+        # Initial KF values (center of the map, large variance)
         cx, cy = self.width / 2.0, self.height / 2.0
         sigma_y_init = 200.0
         sigma_x_init = 1.5 * sigma_y_init
         init_P = np.diag([sigma_x_init**2, sigma_y_init**2]).astype(float)
 
-        if isinstance(options, dict) and "targets_xy" in options:
+        # --- Target Count and Initial Positions ---
+        if "targets_xy" in options:
             txys = list(options["targets_xy"])
             n_active = int(min(len(txys), self.KMAX))
             placed = [tuple(map(float, xy)) for xy in txys[:n_active]]
         else:
             n_active = int(self.rng_spawn.integers(3, 7))
-
             placed: List[Tuple[float, float]] = []
             min_pair = 40.0
             min_robot = 60.0
             tries = 0
+            
             while len(placed) < n_active and tries < 5000:
                 tries += 1
                 tx, ty = _sample_free_xy(min_clear_px=self._keepout + 3)
+                
+                # Check if too close to the robot
                 if np.hypot(tx - rx, ty - ry) < min_robot:
                     continue
+                
+                # Check if too close to other targets
                 ok = True
                 for px, py in placed:
                     if np.hypot(tx - px, ty - py) < min_pair:
@@ -335,11 +347,14 @@ class SimpleGymEnv(gym.Env):
                 if not ok:
                     continue
                 placed.append((tx, ty))
-
+                
+            # Fallback: If unable to place all targets with constraints, force placement without distance checks
             while len(placed) < n_active:
                 tx, ty = _sample_free_xy()
                 placed.append((tx, ty))
 
+        # --- Create BrownWalker for each target with an independent RNG ---
+        motion_children = sseq_motion_parent.spawn(n_active)
         for i in range(n_active):
             pose = np.array(
                 [
@@ -349,10 +364,15 @@ class SimpleGymEnv(gym.Env):
                 ],
                 dtype=float,
             )
+            rng_i = np.random.default_rng(motion_children[i])
             self._tgts[i] = BrownWalker(
-                pose.copy(), step_size=1.5, map_shape=(self.height, self.width)
+                pose.copy(), 
+                step_size=1.5, 
+                map_shape=(self.height, self.width),
+                rng=rng_i
             )
 
+        # --- Assign KFs to all slots ---
         for _ in range(self.KMAX):
             kf = KalmanFilter(init_pos=[cx, cy], init_P=init_P)
             setattr(kf, "_seen", False)
@@ -363,16 +383,39 @@ class SimpleGymEnv(gym.Env):
         info = self._get_info()
         return observation, info
 
+        
     def step(self, action: np.ndarray
              ) -> Tuple[Dict[str, np.ndarray], float, bool, bool, Dict[str, Any]]:
         self._env_step_count += 1
 
         action = np.asarray(action, dtype=float).ravel()
-        if action.size >= 2:
-            v, w = float(action[0]), float(action[1])
-            new_rbt = SE2_kinematics(self._rbt, np.array([v, w], dtype=float), self._tau)
+        if action.size >= 2 and not getattr(self, '_frozen', False):
+            if getattr(self, 'simple_dynamics', False):
+                dx, dy = float(action[0]), float(action[1])
+                # velocity momentum (prevents instant reversals)
+                mom = getattr(self, 'simple_momentum', 0.0)
+                if mom > 0:
+                    if not hasattr(self, '_simple_vel'):
+                        self._simple_vel = np.zeros(2)
+                    self._simple_vel = mom * self._simple_vel + (1 - mom) * np.array([dx, dy])
+                    dx, dy = float(self._simple_vel[0]), float(self._simple_vel[1])
+                # smooth theta
+                if abs(dx) + abs(dy) > 1e-6:
+                    target_th = np.arctan2(dy, dx)
+                    alpha = getattr(self, 'simple_theta_alpha', 0.3)
+                    old_th = self._rbt[2]
+                    diff = (target_th - old_th + np.pi) % (2 * np.pi) - np.pi
+                    th = old_th + alpha * diff
+                else:
+                    th = self._rbt[2]
+                new_rbt = np.array([self._rbt[0] + dx, self._rbt[1] + dy, th])
+            else:
+                v, w = float(action[0]), float(action[1])
+                new_rbt = SE2_kinematics(self._rbt, np.array([v, w], dtype=float), self._tau)
             if not self.check_collision(new_rbt):
                 self._rbt = new_rbt
+            elif getattr(self, 'collision_freeze', False):
+                self._frozen = True
 
         for i in range(self.KMAX):
             if not self._tmask[i] or self._tgts[i] is None:
@@ -442,7 +485,6 @@ class SimpleGymEnv(gym.Env):
 
         for i in range(self.KMAX):
             kf = self._kf_targets[i]
-            print(i, getattr(kf, "_seen", False), kf.P[0,0], kf.P[1,1])
             try:
                 est = kf.x[:2] if hasattr(kf, "x") else np.array([0.0, 0.0], dtype=float)
                 P_pos = kf.P[:2, :2] if hasattr(kf, "P") else np.eye(2, dtype=float)

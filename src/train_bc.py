@@ -41,8 +41,22 @@ def sizeof_fmt(num: float) -> str:
 
 
 class NpzMultiSampleReader:
+    """Reads samples from a single npz file.
+
+    The file is opened and decompressed exactly once (on first access) and
+    kept in memory for the lifetime of the reader.  This eliminates the
+    severe I/O overhead of re-opening a large compressed file for every
+    training sample.
+
+    Memory note: files are memory-mapped (mmap_mode='r') so arrays stay on
+    disk; only per-sample slices (~64 KB each) are copied to RAM.  Multiple
+    DataLoader workers are safe because each worker copies samples, not whole
+    files.  num_workers=4 is recommended to overlap disk I/O with GPU compute.
+    """
+
     def __init__(self, path: str):
         self.path = path
+        self._cache: Optional[Dict[str, np.ndarray]] = None
         with np.load(self.path, allow_pickle=False, mmap_mode=None) as z:
             ego = z["ego_map"]
             self.length = int(ego.shape[0]) if ego.ndim == 4 else 1
@@ -50,24 +64,36 @@ class NpzMultiSampleReader:
     def __len__(self) -> int:
         return self.length
 
+    def _load(self) -> Dict[str, np.ndarray]:
+        """Memory-map the file (arrays stay on disk, OS page cache handles caching)."""
+        z = np.load(self.path, allow_pickle=False, mmap_mode='r')
+        cache: Dict[str, np.ndarray] = {
+            "ego_map": z["ego_map"],
+            "slots":   z["slots"],
+            "action":  z["action"],
+        }
+        if "robot" in z.files:
+            cache["robot"] = z["robot"]
+        # keep z alive so the mmap stays valid
+        cache["_npzfile"] = z  # type: ignore[assignment]
+        return cache
+
     def get(self, idx: int) -> Dict[str, np.ndarray]:
-        with np.load(self.path, allow_pickle=False, mmap_mode=None) as z:
-            if self.length == 1:
-                item = {
-                    "ego_map": z["ego_map"],
-                    "slots": z["slots"],
-                    "action": z["action"],
-                }
-                if "robot" in z.files:
-                    item["robot"] = z["robot"]
-            else:
-                item = {
-                    "ego_map": z["ego_map"][idx],
-                    "slots": z["slots"][idx],
-                    "action": z["action"][idx],
-                }
-                if "robot" in z.files:
-                    item["robot"] = z["robot"][idx]
+        if self._cache is None:
+            self._cache = self._load()
+        c = self._cache
+        if self.length == 1:
+            item = {"ego_map": np.array(c["ego_map"]),
+                    "slots":   np.array(c["slots"]),
+                    "action":  np.array(c["action"])}
+            if "robot" in c:
+                item["robot"] = np.array(c["robot"])
+        else:
+            item = {"ego_map": np.array(c["ego_map"][idx]),
+                    "slots":   np.array(c["slots"][idx]),
+                    "action":  np.array(c["action"][idx])}
+            if "robot" in c:
+                item["robot"] = np.array(c["robot"][idx])
         return item
 
 
@@ -225,6 +251,7 @@ def train(cfg: TrainConfig) -> None:
     )
     print(f"[split] train={train_len}, val={val_len}")
 
+    pf = 2 if cfg.workers > 0 else None
     train_loader = DataLoader(
         ds_train,
         batch_size=cfg.batch_size,
@@ -234,7 +261,7 @@ def train(cfg: TrainConfig) -> None:
         drop_last=True,
         collate_fn=collate_fn,
         persistent_workers=(cfg.workers > 0),
-        prefetch_factor=2,
+        prefetch_factor=pf,
     )
     val_loader = DataLoader(
         ds_val,
@@ -245,7 +272,7 @@ def train(cfg: TrainConfig) -> None:
         drop_last=False,
         collate_fn=collate_fn,
         persistent_workers=(cfg.workers > 0),
-        prefetch_factor=2,
+        prefetch_factor=pf,
     )
 
     model = BCSlotsBaseline(use_robot=cfg.use_robot).to(device)

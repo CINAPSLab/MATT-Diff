@@ -4,8 +4,6 @@ import torch.nn as nn
 from typing import Optional
 
 class TargetSetEncoder(nn.Module):
-    """
-    """
     def __init__(self, slot_dim: int, d_model: int = 256, nhead: int = 4, num_layers: int = 2,
                  dropout: float = 0.1, use_key_padding_mask: bool = True,
                  use_null_replace: bool = True, use_global_fallback: bool = True):
@@ -34,7 +32,15 @@ class TargetSetEncoder(nn.Module):
         B = slots_feat.size(0)
         tok = self.slot_mlp(slots_feat)
         tok = torch.where(mask.to(torch.bool).unsqueeze(-1), tok, self.null_token.expand(B, 1, -1))
-        tok = self.encoder(tok, mask=None, src_key_padding_mask=(mask == 0))
+        kpm = (mask == 0)
+        # PyTorch nested-tensor TransformerEncoder crashes when an entire row is masked.
+        # For fully-masked samples the global_null fallback handles the output, so we
+        # safely un-mask position 0 to keep at least one token visible to the encoder.
+        all_masked = kpm.all(dim=1)  # [B]
+        if all_masked.any():
+            kpm = kpm.clone()
+            kpm[all_masked, 0] = False
+        tok = self.encoder(tok, mask=None, src_key_padding_mask=kpm)
         w = mask.unsqueeze(-1).type_as(tok)
         z = (tok * w).sum(dim=1) / w.sum(dim=1).clamp_min(1.0)
         if self.use_global_fallback:

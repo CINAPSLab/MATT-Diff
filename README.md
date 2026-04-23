@@ -1,15 +1,17 @@
 # Active Multi-Agent tracking
 
+
 This repository is a PyTorch implementation for paper ***[MATT--Diff: Multimodal Active Target Tracking by Diffusion Policy](https://arxiv.org/pdf/2511.11931)***
+
 Authors: [Saida Liu](https://saidaliu27.github.io/), [Nikolay Atanasov](https://natanaso.github.io/), [Shumon Koga](https://shumon0423.github.io/).
 If you are using the code for research work, please cite:
 
 
 ```
-@misc{liu2025mattdiffmultimodalactivetarget,
+@misc{liu2026mattdiffmultimodalactivetarget,
       title={MATT-Diff: Multimodal Active Target Tracking by Diffusion Policy}, 
       author={Saida Liu and Nikolay Atanasov and Shumon Koga},
-      year={2025},
+      year={2026},
       eprint={2511.11931},
       archivePrefix={arXiv},
       primaryClass={cs.RO},
@@ -88,23 +90,46 @@ Training from scratch requires the expert dataset, which is not included in this
 ### Download commands
 
 ```bash
-huggingface-cli download saidaliu27/MATT-Diff dp/best.pt --local-dir src/run/dp
-huggingface-cli download saidaliu27/MATT-Diff bc/best.pt --local-dir src/run/bc
+huggingface-cli download saidaliu27/MATT-Diff dp/best.pt --local-dir output/model/dp
+huggingface-cli download saidaliu27/MATT-Diff bc/best.pt --local-dir output/model/bc
+huggingface-cli download saidaliu27/MATT-Diff dqn/model.zip --local-dir output/model/dqn
 ```
 
 ### Download via curl
 
 ```bash
-curl -L https://huggingface.co/saidaliu27/MATT-Diff/resolve/main/dp/best.pt -o src/run/dp/best.pt
-curl -L https://huggingface.co/saidaliu27/MATT-Diff/resolve/main/bc/best.pt -o src/run/bc/best.pt
+curl -L https://huggingface.co/saidaliu27/MATT-Diff/resolve/main/dp/best.pt -o output/model/dp/best.pt
+curl -L https://huggingface.co/saidaliu27/MATT-Diff/resolve/main/bc/best.pt -o output/model/bc/best.pt
+curl -L https://huggingface.co/saidaliu27/MATT-Diff/resolve/main/dqn/model.zip -o output/model/dqn/model.zip
 ```
 
-After downloading, you can directly evaluate MATT-Diff
+After downloading, you can directly evaluate MATT-Diff.
 
-### Evaluate MATT-Diff
+### Evaluate MATT-Diff (Diffusion Policy)
 
 ```bash
-python -u -m evals.eval_dp
+python -u -m evals.eval_dp_simple \
+    --ckpt output/model/dp/best.pt \
+    --map_path map/5.png \
+    --seed 57 --episodes 10 --collision_freeze
+```
+
+### Evaluate Baselines
+
+```bash
+# Behavior Cloning
+python -u -m evals.eval_bc_simple \
+    --ckpt output/model/bc/best.pt \
+    --map_path map/5.png \
+    --out output/results/bc_eval.json \
+    --ts_dir output/results/bc_timeseries \
+    --seed 57 --episodes 10 --collision_freeze
+
+# DQN
+python -u -m evals.eval_dqn_simple \
+    --ckpt output/model/dqn/model.zip \
+    --map_path map/5.png \
+    --seed 57 --episodes 10 --collision_freeze
 ```
 
 ## Other codes usages
@@ -112,8 +137,7 @@ python -u -m evals.eval_dp
 ### Collect train Dataset
 
 ```bash
-python -u -m logger.explore_logger # collect data of Frontier-based planner
-python -u -m logger.mm_logger # collect data of Time-based, Uncertainty-based planner
-python -u -m logger.refinedata # refine collected expert data
-python -u -m src.train_dp # train MATT-diff
+python -u -m logger.collect_simple_dynamics  # collect expert demonstration data
+python -u -m src.train_dp                    # train MATT-Diff (diffusion policy)
+python -u -m src.train_bc                    # train BC baseline
 ```
