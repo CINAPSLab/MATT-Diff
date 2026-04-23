@@ -8,14 +8,12 @@ If you are using the code for research work, please cite:
 
 
 ```
-@misc{liu2026mattdiffmultimodalactivetarget,
-      title={MATT-Diff: Multimodal Active Target Tracking by Diffusion Policy}, 
-      author={Saida Liu and Nikolay Atanasov and Shumon Koga},
-      year={2026},
-      eprint={2511.11931},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2511.11931}, 
+@inproceedings{liu2026mattdiff,
+  title={MATT-Diff: Multimodal Active Target Tracking by Diffusion Policy},
+  author={Liu, Saida and Atanasov, Nikolay and Koga, Shumon},
+  booktitle={Proceedings of the 8th Annual Learning for Dynamics \&amp; Control Conference (L4DC)},
+  year={2026},
+  note={To appear}
 }
 
 ```
