@@ -21,7 +21,7 @@ If you are using the code for research work, please cite:
 ## Diffusion Policy Network
 
 <div style="display:flex; justify-content:center;">
-  <img src="figs/Network_new.png">
+  <img src="docs/static/images/Network_new.png">
 </div>
 
 
@@ -42,7 +42,7 @@ Diffusion policy, Active Target Tracking, Reinforcement Learning
 ## Experimental Results
 
 <div style="display:flex; justify-content:center;">
-  <img src="figs/trajectory_snapshot_comparison.png">
+  <img src="docs/static/images/trajectory_snapshot_comparison.png">
 </div>
 
 ## Environment / Setup

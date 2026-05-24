@@ -1,0 +1,143 @@
+body {
+  font-family: "Google Sans", sans-serif;
+}
+
+.navbar {
+  background-color: #fff;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.navbar-brand .navbar-item {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #363636;
+}
+
+.publication-title {
+  font-family: "Google Sans", sans-serif;
+}
+
+.publication-authors {
+  font-family: "Google Sans", sans-serif;
+}
+
+.publication-venue {
+  color: #4a4a4a;
+}
+
+.publication-links .external-link {
+  margin: 0.25rem;
+}
+
+.link-block a {
+  font-size: 0.9rem;
+}
+
+/* Hero section */
+.hero.is-light {
+  background: #fafafa;
+}
+
+/* Abstract section */
+#abstract .content {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+/* Results section */
+.results-img {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+/* BibTeX */
+#BibTeX pre {
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 1.5rem;
+  overflow-x: auto;
+  text-align: left;
+}
+
+/* Code blocks in setup section */
+.setup-code pre {
+  background: #272822;
+  color: #f8f8f2;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  padding: 1.25rem;
+  overflow-x: auto;
+  text-align: left;
+}
+
+/* Carousel arrow buttons */
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.55);
+  border: none;
+  border-radius: 50%;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1rem;
+  color: #363636;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, color 0.2s;
+}
+
+.carousel-arrow:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: #000;
+}
+
+.carousel-arrow-left  { left:  0.6rem; }
+.carousel-arrow-right { right: 0.6rem; }
+
+.section-divider {
+  border: none;
+  border-top: 1px solid #e8e8e8;
+  margin: 0;
+}
+
+footer.footer {
+  background-color: #fafafa;
+  padding: 3rem 1.5rem;
+}
+
+.navbar-logo {
+  width: 2.6rem;
+  min-width: 2.6rem;
+  height: 2.6rem;
+  min-height: 2.6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.title-ul {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
+.author-block {
+  display: inline-block;
+}
+
+.author-block a {
+  color: #3273dc;
+  text-decoration: none;
+}
+
+.author-block a:hover {
+  text-decoration: underline;
+}

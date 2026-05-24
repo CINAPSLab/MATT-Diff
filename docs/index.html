@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MATT-Diff: Multimodal Active Target Tracking by Diffusion Policy</title>
+
+  <!-- Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Academicons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="static/css/index.css" />
+</head>
+
+<body>
+
+<!-- ─── Navbar ─────────────────────────────────────────────── -->
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a class="navbar-item" href="https://cinapslab.com/" target="_blank">
+      <img src="static/images/Logo.png" alt="CINAPS Lab" class="navbar-logo" />
+      <span style="margin-left: 0.5rem;">CINAPS Lab</span>
+    </a>
+  </div>
+</nav>
+
+<!-- ─── Hero ──────────────────────────────────────────────── -->
+<section class="hero is-light">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+
+          <h1 class="title is-1 publication-title">
+            MATT-Diff: <span class="title-ul">M</span>ultimodal <span class="title-ul">A</span>ctive <span class="title-ul">T</span>arget <span class="title-ul">T</span>racking by <span class="title-ul">Diff</span>usion Policy
+          </h1>
+
+          <div class="is-size-5 publication-authors" style="margin-top: 1rem;">
+            <span class="author-block">
+              <a href="https://saidaliu27.github.io/" target="_blank">Saida Liu</a><sup>1</sup>,
+            </span>
+            <span class="author-block">
+              <a href="https://natanaso.github.io/" target="_blank">Nikolay Atanasov</a><sup>2</sup>,
+            </span>
+            <span class="author-block">
+              <a href="https://shumon0423.github.io/" target="_blank">Shumon Koga</a><sup>1</sup>
+            </span>
+          </div>
+
+          <div class="is-size-6 publication-authors" style="margin-top: 0.4rem; color: #555;">
+            <span class="author-block"><sup>1</sup>CINAPS Lab, Kobe University&nbsp;&nbsp;</span>
+            <span class="author-block"><sup>2</sup>Existential Robotics Lab, University of California San Diego</span>
+          </div>
+
+          <div class="is-size-6 publication-venue" style="margin-top: 0.5rem;">
+            <em>8th Annual Learning for Dynamics &amp; Control Conference (L4DC), 2026</em>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="column has-text-centered" style="margin-top: 1.25rem;">
+            <div class="publication-links">
+
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/2511.11931" target="_blank"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fas fa-file-pdf"></i></span>
+                  <span>Paper</span>
+                </a>
+              </span>
+
+              <span class="link-block">
+                <a href="https://arxiv.org/abs/2511.11931" target="_blank"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="ai ai-arxiv"></i></span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+
+              <span class="link-block">
+                <a href="https://github.com/CINAPSLab/MATT-Diff" target="_blank"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code</span>
+                </a>
+              </span>
+
+              <span class="link-block">
+                <a href="https://huggingface.co/saidaliu27/MATT-Diff" target="_blank"
+                   class="external-link button is-normal is-rounded is-warning">
+                  <span class="icon"><i class="fas fa-database"></i></span>
+                  <span>Models</span>
+                </a>
+              </span>
+
+            </div>
+          </div>
+          <!-- /Action buttons -->
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- /Hero -->
+
+
+<!-- ─── Trajectories ───────────────────────────────────────── -->
+<section class="section" id="trajectories">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-10">
+        <div id="gif-carousel">
+
+          <p id="carousel-label" class="is-size-5" style="margin-bottom: 0.75rem;">
+            <strong>MATT-Diff</strong>
+          </p>
+
+          <div style="position: relative; display: inline-block; width: 100%;">
+            <button class="carousel-arrow carousel-arrow-left" onclick="changeSlide(-1)" aria-label="Previous">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <figure class="image">
+              <img id="carousel-img" src="static/images/matt_diff.gif" alt="" class="results-img" />
+            </figure>
+            <button class="carousel-arrow carousel-arrow-right" onclick="changeSlide(1)" aria-label="Next">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div id="carousel-dots" class="is-flex is-justify-content-center" style="gap: 0.5rem; margin-top: 0.9rem;"></div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+<!-- /Trajectories -->
+
+<script>
+  const slides = [
+    { src: "static/images/matt_diff.gif",   label: "MATT-Diff" },
+    { src: "static/images/frontier.gif",    label: "Frontier-based explore planner" },
+    { src: "static/images/uncertainty.gif", label: "Uncertainty-based hybrid planner" },
+    { src: "static/images/time_based.gif",  label: "Time-based hybrid planner" },
+  ];
+
+  let current = 0;
+
+  const img    = document.getElementById("carousel-img");
+  const label  = document.getElementById("carousel-label");
+  const dotsEl = document.getElementById("carousel-dots");
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement("span");
+    dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;cursor:pointer;transition:background .2s;";
+    dot.addEventListener("click", () => goTo(i));
+    dotsEl.appendChild(dot);
+  });
+
+  function goTo(index) {
+    current = (index + slides.length) % slides.length;
+    img.src  = slides[current].src;
+    label.innerHTML = "<strong>" + slides[current].label + "</strong>";
+    document.querySelectorAll("#carousel-dots span").forEach((d, i) => {
+      d.style.background = i === current ? "#363636" : "#ccc";
+    });
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  goTo(0);
+</script>
+
+<hr class="section-divider" />
+
+<!-- ─── Abstract ──────────────────────────────────────────── -->
+<section class="section" id="abstract">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content">
+          <p>
+            MATT-Diff is a diffusion-policy-based framework for <strong>active multi-target tracking</strong>
+            in partially observable indoor environments. It learns multi-modal action strategies
+            from three expert planners, using a preformer map encoder and attention-based target
+            encoder over Gaussian beliefs. By training on demonstrations from diverse expert
+            strategies, MATT-Diff captures the inherent multi-modality of the tracking task
+            and generalizes to unseen environments at test time.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- /Abstract -->
+
+<hr class="section-divider" />
+
+<!-- ─── Methodology ───────────────────────────────────────── -->
+<section class="section" id="methodology">
+  <div class="container is-max-desktop">
+
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <h2 class="title is-3">Methodology</h2>
+      </div>
+    </div>
+
+    <!-- Network Overview figure -->
+    <div class="columns is-centered">
+      <div class="column is-full has-text-centered">
+        <p class="title is-4" style="margin-bottom: 0.75rem;">Network Overview</p>
+        <figure class="image">
+          <img src="static/images/Network_new.png" alt="MATT-Diff network overview"
+               class="results-img" />
+        </figure>
+        <p class="is-size-6 has-text-grey" style="margin-top: 0.75rem;">
+          MATT-Diff learns multi-modal action strategies from multiple expert planners using a
+          Performer map encoder and attention-based target encoder over Gaussian beliefs.
+        </p>
+      </div>
+    </div>
+
+    <!-- Network Architecture -->
+    <div class="columns is-centered" style="margin-top: 2.5rem;">
+      <div class="column is-four-fifths">
+        <h3 class="title is-4">Network Architecture</h3>
+        <div class="content">
+          <p>
+            MATT-Diff conditions a denoising diffusion model on two learned encodings of the agent's
+            current observation.
+          </p>
+          <p>
+            <strong>Map Encoder</strong> — processes a 4-channel ego-centric local map:
+            (1)&nbsp;<em>known free space</em> (binary), (2)&nbsp;<em>unknown space</em> (binary),
+            (3)&nbsp;<em>visit frequency</em> (continuous, normalized), and
+            (4)&nbsp;<em>current field of view</em> (binary).
+            A CNN stem downsamples the input, then dual-scale patch tokens are fed into a
+            Performer Transformer (linear attention with Random Fourier Features + RoPE),
+            and the CLS token is used as the map embedding.
+          </p>
+          <p>
+            <strong>Target Encoder</strong> — processes the Gaussian belief state (position mean
+            and covariance) of each target slot. Undetected or lost targets are replaced by a
+            learned null token. A Transformer encoder with self-attention processes all slots,
+            and detected slots are aggregated via masked mean pooling into a fixed-size embedding.
+            When no targets are detected, a global null fallback embedding is used.
+          </p>
+          <p>
+            Both embeddings are concatenated and passed to the diffusion policy network, which
+            iteratively denoises a sampled action over multiple diffusion steps at inference time.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expert Planners -->
+    <div class="columns is-centered" style="margin-top: 2.5rem;">
+      <div class="column is-four-fifths">
+        <h3 class="title is-4">Expert Planners</h3>
+        <div class="content">
+          <p>
+            MATT-Diff is trained via imitation learning on demonstrations from three expert planners,
+            each capturing a distinct high-level strategy:
+          </p>
+          <div class="columns is-multiline" style="margin-top: 1rem;">
+
+            <div class="column is-4">
+              <div class="box" style="height:100%;">
+                <p class="title is-6" style="margin-bottom: 0.5rem;">Frontier-based explore planner</p>
+                <p class="is-size-6 has-text-grey">
+                  A pure exploration planner that navigates toward unexplored frontier cells,
+                  maximizing map coverage.
+                </p>
+              </div>
+            </div>
+
+            <div class="column is-4">
+              <div class="box" style="height:100%;">
+                <p class="title is-6" style="margin-bottom: 0.5rem;">Uncertainty-based hybrid planner</p>
+                <p class="is-size-6 has-text-grey">
+                  A hybrid exploration-exploitation planner that prioritizes re-acquiring
+                  previously detected targets whose belief uncertainty has grown.
+                </p>
+              </div>
+            </div>
+
+            <div class="column is-4">
+              <div class="box" style="height:100%;">
+                <p class="title is-6" style="margin-bottom: 0.5rem;">Time-based hybrid planner</p>
+                <p class="is-size-6 has-text-grey">
+                  A hybrid exploration-exploitation planner that switches to tracking detected
+                  targets based on elapsed time since last observation.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+<!-- /Methodology -->
+
+<hr class="section-divider" />
+
+<!-- ─── Experiment Results ─────────────────────────────────── -->
+<section class="section" id="experiment-results">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <h2 class="title is-3">Experiment Results</h2>
+        <figure class="image">
+          <img src="static/images/Table.png" alt="Quantitative results table" class="results-img" />
+        </figure>
+        <p class="is-size-6 has-text-grey" style="margin-top: 0.75rem;">
+          Quantitative comparison of MATT-Diff against baselines.
+        </p>
+
+        <div class="content" style="margin-top: 2.5rem; text-align: left;">
+          <p>
+            MATT-Diff acquires behaviors learned from all expert planners — it represents each
+            distinct strategy (exploration, re-acquisition, and target tracking) that the expert
+            planners exhibit.
+          </p>
+        </div>
+
+        <figure class="image" style="margin-top: 1rem;">
+          <img src="static/images/trajectory_snapshot_comparison.png"
+               alt="Trajectory snapshot comparison" class="results-img" />
+        </figure>
+        <p class="is-size-6 has-text-grey" style="margin-top: 0.75rem;">
+          Trajectory snapshots showing that MATT-Diff reproduces the behavior of each expert planner.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</section>
+<!-- /Experiment Results -->
+
+<hr class="section-divider" />
+
+<!-- ─── BibTeX ─────────────────────────────────────────────── -->
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">BibTeX</h2>
+        <pre>@inproceedings{liu2026mattdiff,
+  title     = {MATT-Diff: Multimodal Active Target Tracking by Diffusion Policy},
+  author    = {Liu, Saida and Atanasov, Nikolay and Koga, Shumon},
+  booktitle = {Proceedings of the 8th Annual Learning for Dynamics \&amp; Control Conference (L4DC)},
+  year      = {2026},
+  note      = {To appear}
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- /BibTeX -->
+
+
+<!-- ─── Footer ────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8 has-text-centered">
+        <div class="content">
+          <p>
+            This page was built using the
+            <a href="https://github.com/nerfies/nerfies.github.io" target="_blank">Nerfies</a>
+            project page template, licensed under a
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">
+              Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+            We sincerely thank the developers for open-sourcing this template.
+          </p>
+          <p>
+            <a href="https://github.com/CINAPSLab/MATT-Diff" target="_blank">
+              <i class="fab fa-github"></i> Source Code
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- /Footer -->
+
+</body>
+</html>
