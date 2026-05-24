@@ -3,6 +3,8 @@
 
 This repository is a PyTorch implementation for paper ***[MATT--Diff: Multimodal Active Target Tracking by Diffusion Policy](https://arxiv.org/pdf/2511.11931)***
 
+**Project Page: [https://cinapslab.github.io/MATT-Diff/](https://cinapslab.github.io/MATT-Diff/)**
+
 Authors: [Saida Liu](https://saidaliu27.github.io/), [Nikolay Atanasov](https://natanaso.github.io/), [Shumon Koga](https://shumon0423.github.io/).
 If you are using the code for research work, please cite:
 
